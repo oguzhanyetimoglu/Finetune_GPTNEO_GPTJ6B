@@ -314,9 +314,11 @@ def main():
     if model_args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.tokenizer_name, **tokenizer_kwargs)
+        tokenizer.add_tokens(["<|separator|>"])
     elif model_args.model_name_or_path:
         tokenizer = AutoTokenizer.from_pretrained(
             model_args.model_name_or_path, **tokenizer_kwargs)
+        tokenizer.add_tokens(["<|separator|>"])
 
     else:
         raise ValueError(
@@ -349,6 +351,19 @@ def main():
     else:
         column_names = datasets["validation"].column_names
     text_column_name = "text" if "text" in column_names else column_names[0]
+
+    def mask_input(tokenized_inputs: dict, val_separator_: int) -> dict:
+        for i, tokens in enumerate(tokenized_inputs["input_ids"]):
+            try:
+                ind = tokens.index(val_separator_)
+                tokenized_inputs["attention_mask"][i][:ind+1] = [0] * (ind+1)
+            except:
+                pass
+        return tokenized_inputs
+
+
+    #def tokenize_function(examples):
+    #    return mask_input(tokenizer(examples[text_column_name]), tokenizer("<|separator|>")["input_ids"][0])
 
     def tokenize_function(examples):
         return tokenizer(examples[text_column_name])
